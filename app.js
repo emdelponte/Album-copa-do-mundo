@@ -210,8 +210,13 @@ function buildStickerInner(num, state) {
 function attachStickerEvents(cell, key) {
   let _pressTimer = null;
   let _longFired = false;
+  let _touchStartX = 0;
+  let _touchStartY = 0;
+  let _isScrolling = false;
+  const MOVE_THRESHOLD = 10; // pixels
 
   function onLongPress() {
+    if (_isScrolling) return;
     _longFired = true;
     _pressTimer = null;
     const current = collection[key] || "none";
@@ -228,8 +233,13 @@ function attachStickerEvents(cell, key) {
     if (navigator.vibrate) navigator.vibrate(80);
   }
 
-  function startPress() {
+  function startPress(e) {
     _longFired = false;
+    _isScrolling = false;
+    if (e.touches && e.touches[0]) {
+      _touchStartX = e.touches[0].clientX;
+      _touchStartY = e.touches[0].clientY;
+    }
     _pressTimer = setTimeout(onLongPress, 600);
   }
 
@@ -245,24 +255,41 @@ function attachStickerEvents(cell, key) {
   cell.addEventListener("mouseup", cancelPress);
   cell.addEventListener("mouseleave", cancelPress);
   cell.addEventListener("click", () => {
-    if (_longFired) { _longFired = false; return; } // ignore click after long press
+    if (_longFired) { _longFired = false; return; }
     toggleSticker(key);
   });
 
   // ── Touch (mobile) ──
   cell.addEventListener("touchstart", (e) => {
-    e.preventDefault(); // prevent ghost click & scrolling on the cell
-    startPress();
-  }, { passive: false });
+    // DO NOT preventDefault here to allow scrolling
+    startPress(e);
+  }, { passive: true });
+
+  cell.addEventListener("touchmove", (e) => {
+    if (!_pressTimer) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - _touchStartX);
+    const dy = Math.abs(touch.clientY - _touchStartY);
+    
+    if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+      _isScrolling = true;
+      cancelPress(); // Cancel marking if moving (scrolling)
+    }
+  }, { passive: true });
 
   cell.addEventListener("touchend", (e) => {
-    e.preventDefault();
     if (_pressTimer) {
-      // Short tap — it's a toggle
+      // Short tap — check if it was a scroll
       cancelPress();
-      if (!_longFired) toggleSticker(key);
+      if (!_longFired && !_isScrolling) {
+        // Only prevent default on touchend to stop ghost clicks
+        e.preventDefault(); 
+        toggleSticker(key);
+      }
+    } else if (_longFired || _isScrolling) {
+      // If long press fired or we scrolled, prevent default to stop clicks
+      e.preventDefault();
     }
-    // If _pressTimer is null here, long press already fired — do nothing
   }, { passive: false });
 
   cell.addEventListener("touchcancel", () => {
