@@ -76,7 +76,7 @@ function renderCountriesGrid(filter = currentRegionFilter) {
   const grid = document.getElementById("countries-grid");
   grid.innerHTML = "";
 
-  const list = filter === "all" ? COUNTRIES : COUNTRIES.filter(c => c.region === filter);
+  const list = filter === "all" ? COUNTRIES : COUNTRIES.filter(c => c.group === filter);
 
   list.forEach(country => {
     const owned = getCountryOwned(country.code);
@@ -85,12 +85,12 @@ function renderCountriesGrid(filter = currentRegionFilter) {
 
     const card = document.createElement("div");
     card.className = `country-card${complete ? " complete" : ""}${country.host ? " host" : ""}`;
-    card.setAttribute("data-region", country.region);
+    card.setAttribute("data-group", country.group);
     card.onclick = () => openCountry(country);
 
     card.innerHTML = `
       <div class="card-flag">${country.flag}</div>
-      <div class="card-code">${country.code}</div>
+      <div class="card-group-badge">Grupo ${country.group}</div>
       <div class="card-name">${country.name}</div>
       <div class="card-progress-wrap">
         <div class="card-progress-bar">
@@ -106,11 +106,11 @@ function renderCountriesGrid(filter = currentRegionFilter) {
   });
 }
 
-function filterRegion(btn, region) {
+function filterRegion(btn, group) {
   document.querySelectorAll(".region-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
-  currentRegionFilter = region;
-  renderCountriesGrid(region);
+  currentRegionFilter = group;
+  renderCountriesGrid(group);
 }
 
 function getCountryOwned(code) {
@@ -122,7 +122,7 @@ function openCountry(country) {
   currentCountry = country;
   document.getElementById("detail-flag").textContent = country.flag;
   document.getElementById("detail-name").textContent = country.name;
-  document.getElementById("detail-region").textContent = getRegionLabel(country.region);
+  document.getElementById("detail-region").textContent = `Grupo ${country.group}`;
   renderStickersGrid(country);
   showScreen("screen-country");
 }
@@ -455,14 +455,6 @@ function showToast(msg) {
 }
 
 // ── Helpers ───────────────────────────────────────────────
-function getRegionLabel(region) {
-  const labels = {
-    UEFA: "🇪🇺 UEFA — Europa",
-    CONMEBOL: "🌎 CONMEBOL — América do Sul",
-    CONCACAF: "🌍 CONCACAF — América do Norte / Central",
-    AFC: "🌏 AFC — Ásia",
-    CAF: "🌍 CAF — África",
-    OFC: "🌊 OFC — Oceania",
-  };
-  return labels[region] || region;
+function getGroupLabel(group) {
+  return `Grupo ${group} — Copa do Mundo 2026`;
 }

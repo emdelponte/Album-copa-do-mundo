@@ -1,69 +1,80 @@
 // ============================================================
 // DATA: 2026 FIFA World Cup - All 48 Teams
+// Organized by official group draw (Groups A–L)
 // ============================================================
 
 const COUNTRIES = [
-  // Co-hosts
-  { code: "USA", name: "Estados Unidos", flag: "🇺🇸", region: "CONCACAF", host: true },
-  { code: "CAN", name: "Canadá", flag: "🇨🇦", region: "CONCACAF", host: true },
-  { code: "MEX", name: "México", flag: "🇲🇽", region: "CONCACAF", host: true },
+  // ── Grupo A ──
+  { code: "MEX", name: "México",           flag: "🇲🇽", group: "A", host: true  },
+  { code: "RSA", name: "África do Sul",    flag: "🇿🇦", group: "A" },
+  { code: "KOR", name: "Coreia do Sul",    flag: "🇰🇷", group: "A" },
+  { code: "CZE", name: "República Tcheca", flag: "🇨🇿", group: "A" },
 
-  // CONCACAF (others)
-  { code: "CUR", name: "Curaçao", flag: "🇨🇼", region: "CONCACAF" },
-  { code: "HAI", name: "Haiti", flag: "🇭🇹", region: "CONCACAF" },
-  { code: "PAN", name: "Panamá", flag: "🇵🇦", region: "CONCACAF" },
+  // ── Grupo B ──
+  { code: "CAN", name: "Canadá",           flag: "🇨🇦", group: "B", host: true  },
+  { code: "SUI", name: "Suíça",            flag: "🇨🇭", group: "B" },
+  { code: "QAT", name: "Catar",            flag: "🇶🇦", group: "B" },
+  { code: "BIH", name: "Bósnia e Herzeg.", flag: "🇧🇦", group: "B" },
 
-  // CONMEBOL
-  { code: "ARG", name: "Argentina", flag: "🇦🇷", region: "CONMEBOL" },
-  { code: "BRA", name: "Brasil", flag: "🇧🇷", region: "CONMEBOL" },
-  { code: "COL", name: "Colômbia", flag: "🇨🇴", region: "CONMEBOL" },
-  { code: "ECU", name: "Equador", flag: "🇪🇨", region: "CONMEBOL" },
-  { code: "PAR", name: "Paraguai", flag: "🇵🇾", region: "CONMEBOL" },
-  { code: "URU", name: "Uruguai", flag: "🇺🇾", region: "CONMEBOL" },
+  // ── Grupo C ──
+  { code: "BRA", name: "Brasil",           flag: "🇧🇷", group: "C" },
+  { code: "MAR", name: "Marrocos",         flag: "🇲🇦", group: "C" },
+  { code: "SCO", name: "Escócia",          flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", group: "C" },
+  { code: "HAI", name: "Haiti",            flag: "🇭🇹", group: "C" },
 
-  // UEFA
-  { code: "AUT", name: "Áustria", flag: "🇦🇹", region: "UEFA" },
-  { code: "BEL", name: "Bélgica", flag: "🇧🇪", region: "UEFA" },
-  { code: "BIH", name: "Bósnia e Herzegóvina", flag: "🇧🇦", region: "UEFA" },
-  { code: "CRO", name: "Croácia", flag: "🇭🇷", region: "UEFA" },
-  { code: "CZE", name: "República Tcheca", flag: "🇨🇿", region: "UEFA" },
-  { code: "ENG", name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", region: "UEFA" },
-  { code: "FRA", name: "França", flag: "🇫🇷", region: "UEFA" },
-  { code: "GER", name: "Alemanha", flag: "🇩🇪", region: "UEFA" },
-  { code: "NED", name: "Holanda", flag: "🇳🇱", region: "UEFA" },
-  { code: "NOR", name: "Noruega", flag: "🇳🇴", region: "UEFA" },
-  { code: "POR", name: "Portugal", flag: "🇵🇹", region: "UEFA" },
-  { code: "SCO", name: "Escócia", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", region: "UEFA" },
-  { code: "ESP", name: "Espanha", flag: "🇪🇸", region: "UEFA" },
-  { code: "SWE", name: "Suécia", flag: "🇸🇪", region: "UEFA" },
-  { code: "SUI", name: "Suíça", flag: "🇨🇭", region: "UEFA" },
-  { code: "TUR", name: "Turquia", flag: "🇹🇷", region: "UEFA" },
+  // ── Grupo D ──
+  { code: "USA", name: "Estados Unidos",   flag: "🇺🇸", group: "D", host: true  },
+  { code: "PAR", name: "Paraguai",         flag: "🇵🇾", group: "D" },
+  { code: "AUS", name: "Austrália",        flag: "🇦🇺", group: "D" },
+  { code: "TUR", name: "Turquia",          flag: "🇹🇷", group: "D" },
 
-  // AFC
-  { code: "AUS", name: "Austrália", flag: "🇦🇺", region: "AFC" },
-  { code: "IRQ", name: "Iraque", flag: "🇮🇶", region: "AFC" },
-  { code: "IRN", name: "Irã", flag: "🇮🇷", region: "AFC" },
-  { code: "JPN", name: "Japão", flag: "🇯🇵", region: "AFC" },
-  { code: "JOR", name: "Jordânia", flag: "🇯🇴", region: "AFC" },
-  { code: "KOR", name: "Coreia do Sul", flag: "🇰🇷", region: "AFC" },
-  { code: "QAT", name: "Catar", flag: "🇶🇦", region: "AFC" },
-  { code: "KSA", name: "Arábia Saudita", flag: "🇸🇦", region: "AFC" },
-  { code: "UZB", name: "Uzbequistão", flag: "🇺🇿", region: "AFC" },
+  // ── Grupo E ──
+  { code: "GER", name: "Alemanha",         flag: "🇩🇪", group: "E" },
+  { code: "ECU", name: "Equador",          flag: "🇪🇨", group: "E" },
+  { code: "CIV", name: "Costa do Marfim", flag: "🇨🇮", group: "E" },
+  { code: "CUR", name: "Curaçao",          flag: "🇨🇼", group: "E" },
 
-  // CAF
-  { code: "ALG", name: "Argélia", flag: "🇩🇿", region: "CAF" },
-  { code: "CPV", name: "Cabo Verde", flag: "🇨🇻", region: "CAF" },
-  { code: "COD", name: "Congo RD", flag: "🇨🇩", region: "CAF" },
-  { code: "CIV", name: "Costa do Marfim", flag: "🇨🇮", region: "CAF" },
-  { code: "EGY", name: "Egito", flag: "🇪🇬", region: "CAF" },
-  { code: "GHA", name: "Gana", flag: "🇬🇭", region: "CAF" },
-  { code: "MAR", name: "Marrocos", flag: "🇲🇦", region: "CAF" },
-  { code: "SEN", name: "Senegal", flag: "🇸🇳", region: "CAF" },
-  { code: "RSA", name: "África do Sul", flag: "🇿🇦", region: "CAF" },
-  { code: "TUN", name: "Tunísia", flag: "🇹🇳", region: "CAF" },
+  // ── Grupo F ──
+  { code: "NED", name: "Holanda",          flag: "🇳🇱", group: "F" },
+  { code: "JPN", name: "Japão",            flag: "🇯🇵", group: "F" },
+  { code: "TUN", name: "Tunísia",          flag: "🇹🇳", group: "F" },
+  { code: "SWE", name: "Suécia",           flag: "🇸🇪", group: "F" },
 
-  // OFC
-  { code: "NZL", name: "Nova Zelândia", flag: "🇳🇿", region: "OFC" },
+  // ── Grupo G ──
+  { code: "BEL", name: "Bélgica",          flag: "🇧🇪", group: "G" },
+  { code: "EGY", name: "Egito",            flag: "🇪🇬", group: "G" },
+  { code: "IRN", name: "Irã",              flag: "🇮🇷", group: "G" },
+  { code: "NZL", name: "Nova Zelândia",    flag: "🇳🇿", group: "G" },
+
+  // ── Grupo H ──
+  { code: "ESP", name: "Espanha",          flag: "🇪🇸", group: "H" },
+  { code: "URU", name: "Uruguai",          flag: "🇺🇾", group: "H" },
+  { code: "KSA", name: "Arábia Saudita",   flag: "🇸🇦", group: "H" },
+  { code: "CPV", name: "Cabo Verde",       flag: "🇨🇻", group: "H" },
+
+  // ── Grupo I ──
+  { code: "FRA", name: "França",           flag: "🇫🇷", group: "I" },
+  { code: "SEN", name: "Senegal",          flag: "🇸🇳", group: "I" },
+  { code: "NOR", name: "Noruega",          flag: "🇳🇴", group: "I" },
+  { code: "IRQ", name: "Iraque",           flag: "🇮🇶", group: "I" },
+
+  // ── Grupo J ──
+  { code: "ARG", name: "Argentina",        flag: "🇦🇷", group: "J" },
+  { code: "AUT", name: "Áustria",          flag: "🇦🇹", group: "J" },
+  { code: "ALG", name: "Argélia",          flag: "🇩🇿", group: "J" },
+  { code: "JOR", name: "Jordânia",         flag: "🇯🇴", group: "J" },
+
+  // ── Grupo K ──
+  { code: "POR", name: "Portugal",         flag: "🇵🇹", group: "K" },
+  { code: "COL", name: "Colômbia",         flag: "🇨🇴", group: "K" },
+  { code: "UZB", name: "Uzbequistão",      flag: "🇺🇿", group: "K" },
+  { code: "COD", name: "Congo RD",         flag: "🇨🇩", group: "K" },
+
+  // ── Grupo L ──
+  { code: "ENG", name: "Inglaterra",       flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", group: "L" },
+  { code: "CRO", name: "Croácia",          flag: "🇭🇷", group: "L" },
+  { code: "PAN", name: "Panamá",           flag: "🇵🇦", group: "L" },
+  { code: "GHA", name: "Gana",             flag: "🇬🇭", group: "L" },
 ];
 
 // 20 stickers per country
