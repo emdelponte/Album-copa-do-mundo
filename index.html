@@ -90,6 +90,16 @@
 
       <!-- SCREEN: COUNTRY (Stickers) -->
       <section id="screen-country" class="screen">
+        <!-- Country navigation -->
+        <div class="country-nav">
+          <button id="btn-prev-country" class="country-nav-btn" onclick="navigateCountry(-1)" title="País anterior">
+            &#8592; <span class="country-nav-label" id="nav-prev-name"></span>
+          </button>
+          <span id="country-nav-index" class="country-nav-index"></span>
+          <button id="btn-next-country" class="country-nav-btn country-nav-btn-right" onclick="navigateCountry(1)" title="Próximo país">
+            <span class="country-nav-label" id="nav-next-name"></span> &#8594;
+          </button>
+        </div>
         <div class="country-header">
           <div class="country-flag-big" id="detail-flag"></div>
           <div class="country-info">
@@ -104,7 +114,7 @@
           </div>
         </div>
         <div class="stickers-hint">
-          <span>🖱️ Clique para marcar/desmarcar · Clique longo para marcar como REPETIDA</span>
+          <span>👆 Toque para marcar/desmarcar · Toque longo para REPETIDA</span>
         </div>
         <div id="stickers-grid" class="stickers-grid"></div>
         <div class="country-actions">

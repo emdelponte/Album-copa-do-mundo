@@ -123,8 +123,47 @@ function openCountry(country) {
   document.getElementById("detail-flag").textContent = country.flag;
   document.getElementById("detail-name").textContent = country.name;
   document.getElementById("detail-region").textContent = `Grupo ${country.group}`;
+  
+  updateCountryNav();
   renderStickersGrid(country);
   showScreen("screen-country");
+}
+
+function updateCountryNav() {
+  const index = COUNTRIES.findIndex(c => c.code === currentCountry.code);
+  const total = COUNTRIES.length;
+
+  const prevBtn = document.getElementById("btn-prev-country");
+  const nextBtn = document.getElementById("btn-next-country");
+  const prevLabel = document.getElementById("nav-prev-name");
+  const nextLabel = document.getElementById("nav-next-name");
+  const indexLabel = document.getElementById("country-nav-index");
+
+  indexLabel.textContent = `${index + 1} / ${total}`;
+
+  if (index > 0) {
+    prevBtn.disabled = false;
+    prevLabel.textContent = COUNTRIES[index - 1].name;
+  } else {
+    prevBtn.disabled = true;
+    prevLabel.textContent = "";
+  }
+
+  if (index < total - 1) {
+    nextBtn.disabled = false;
+    nextLabel.textContent = COUNTRIES[index + 1].name;
+  } else {
+    nextBtn.disabled = true;
+    nextLabel.textContent = "";
+  }
+}
+
+function navigateCountry(dir) {
+  const index = COUNTRIES.findIndex(c => c.code === currentCountry.code);
+  const newIndex = index + dir;
+  if (newIndex >= 0 && newIndex < COUNTRIES.length) {
+    openCountry(COUNTRIES[newIndex]);
+  }
 }
 
 function renderStickersGrid(country) {
