@@ -314,13 +314,13 @@ function renderCollection() {
       else if (currentCollFilter === "repeated") show = state === "repeated";
       else if (currentCollFilter === "missing") show = state === "none";
 
-      if (!show) return;
+      if (!show) continue; // ← era `return`, que saía do forEach inteiro!
 
       // Search filter
       if (query) {
         const matchCountry = country.name.toLowerCase().includes(query) || country.code.toLowerCase().includes(query);
         const matchNum = String(i).includes(query);
-        if (!matchCountry && !matchNum) return;
+        if (!matchCountry && !matchNum) continue; // ← idem
       }
 
       stickers.push({ num: i, state, key });
