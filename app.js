@@ -9,6 +9,7 @@ let currentScreen = "home";
 let currentRegionFilter = "all";
 let currentCollFilter = "all";
 let pressTimer = null;
+let longPressTriggered = false;
 
 // ── Init ──────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -130,6 +131,9 @@ function renderStickersGrid(country) {
   const grid = document.getElementById("stickers-grid");
   grid.innerHTML = "";
 
+  // Remove old delegated listener by replacing the grid node clone
+  // (simpler: we re-use a single delegated approach via data attributes)
+
   let owned = 0;
 
   for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
@@ -140,30 +144,88 @@ function renderStickersGrid(country) {
     const cell = document.createElement("div");
     cell.className = `sticker sticker-${state}`;
     cell.id = `sticker-${key}`;
-    cell.innerHTML = `
-      <span class="sticker-num">${i}</span>
-      ${state === "repeated" ? '<span class="sticker-rep-badge">R</span>' : ""}
-      ${state === "normal" ? '<span class="sticker-check">✔</span>' : ""}
-    `;
+    cell.dataset.key = key;
+    cell.innerHTML = buildStickerInner(i, state);
 
-    // Click: toggle normal
-    cell.addEventListener("click", () => toggleSticker(key, cell));
-
-    // Long press: mark as repeated
-    cell.addEventListener("mousedown", () => startLongPress(key, cell));
-    cell.addEventListener("mouseup", cancelLongPress);
-    cell.addEventListener("mouseleave", cancelLongPress);
-    cell.addEventListener("touchstart", (e) => { e.preventDefault(); startLongPress(key, cell); }, { passive: false });
-    cell.addEventListener("touchend", cancelLongPress);
-
+    attachStickerEvents(cell, key);
     grid.appendChild(cell);
   }
 
   updateCountryProgress(country.code, owned);
 }
 
-function toggleSticker(key, cell) {
-  if (pressTimer) return; // was long press
+function buildStickerInner(num, state) {
+  return `
+    <span class="sticker-num">${num}</span>
+    ${state === "repeated" ? '<span class="sticker-rep-badge">R</span>' : ""}
+    ${state === "normal" ? '<span class="sticker-check">✔</span>' : ""}
+  `;
+}
+
+function attachStickerEvents(cell, key) {
+  let _pressTimer = null;
+  let _longFired = false;
+
+  function onLongPress() {
+    _longFired = true;
+    _pressTimer = null;
+    const current = collection[key] || "none";
+    if (current !== "repeated") {
+      collection[key] = "repeated";
+      showToast(`Marcada como REPETIDA! 🔁`);
+    } else {
+      collection[key] = "normal";
+      showToast(`Repetida removida`);
+    }
+    saveCollection();
+    refreshStickerCell(key);
+    updateCountryProgress(currentCountry.code, getCountryOwned(currentCountry.code));
+    if (navigator.vibrate) navigator.vibrate(80);
+  }
+
+  function startPress() {
+    _longFired = false;
+    _pressTimer = setTimeout(onLongPress, 600);
+  }
+
+  function cancelPress() {
+    if (_pressTimer) {
+      clearTimeout(_pressTimer);
+      _pressTimer = null;
+    }
+  }
+
+  // ── Mouse (desktop) ──
+  cell.addEventListener("mousedown", startPress);
+  cell.addEventListener("mouseup", cancelPress);
+  cell.addEventListener("mouseleave", cancelPress);
+  cell.addEventListener("click", () => {
+    if (_longFired) { _longFired = false; return; } // ignore click after long press
+    toggleSticker(key);
+  });
+
+  // ── Touch (mobile) ──
+  cell.addEventListener("touchstart", (e) => {
+    e.preventDefault(); // prevent ghost click & scrolling on the cell
+    startPress();
+  }, { passive: false });
+
+  cell.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    if (_pressTimer) {
+      // Short tap — it's a toggle
+      cancelPress();
+      if (!_longFired) toggleSticker(key);
+    }
+    // If _pressTimer is null here, long press already fired — do nothing
+  }, { passive: false });
+
+  cell.addEventListener("touchcancel", () => {
+    cancelPress();
+  });
+}
+
+function toggleSticker(key) {
   const current = collection[key] || "none";
 
   if (current === "none") {
@@ -182,53 +244,17 @@ function toggleSticker(key, cell) {
   updateCountryProgress(currentCountry.code, getCountryOwned(currentCountry.code));
 }
 
-function startLongPress(key, cell) {
-  pressTimer = null;
-  pressTimer = setTimeout(() => {
-    pressTimer = "done";
-    const current = collection[key] || "none";
-    if (current !== "repeated") {
-      collection[key] = "repeated";
-      showToast(`Marcada como REPETIDA! 🔁`);
-    } else {
-      collection[key] = "normal";
-      showToast(`Repetida removida`);
-    }
-    saveCollection();
-    refreshStickerCell(key);
-    updateCountryProgress(currentCountry.code, getCountryOwned(currentCountry.code));
-    // Haptic if available
-    if (navigator.vibrate) navigator.vibrate(80);
-  }, 600);
-}
-
-function cancelLongPress() {
-  if (pressTimer && pressTimer !== "done") {
-    clearTimeout(pressTimer);
-  }
-  pressTimer = null;
-}
-
 function refreshStickerCell(key) {
   const state = collection[key] || "none";
   const cell = document.getElementById(`sticker-${key}`);
   if (!cell) return;
 
+  // Update class and inner HTML only — events stay on the element (not re-attached)
   cell.className = `sticker sticker-${state}`;
-  const num = key.split("-")[1];
-  cell.innerHTML = `
-    <span class="sticker-num">${num}</span>
-    ${state === "repeated" ? '<span class="sticker-rep-badge">R</span>' : ""}
-    ${state === "normal" ? '<span class="sticker-check">✔</span>' : ""}
-  `;
-
-  // Re-attach events after innerHTML replace
-  cell.addEventListener("click", () => toggleSticker(key, cell));
-  cell.addEventListener("mousedown", () => startLongPress(key, cell));
-  cell.addEventListener("mouseup", cancelLongPress);
-  cell.addEventListener("mouseleave", cancelLongPress);
-  cell.addEventListener("touchstart", (e) => { e.preventDefault(); startLongPress(key, cell); }, { passive: false });
-  cell.addEventListener("touchend", cancelLongPress);
+  const num = key.split("-").slice(1).join("-"); // handles codes like USA-1
+  cell.innerHTML = buildStickerInner(num, state);
+  // NOTE: events attached in attachStickerEvents remain bound to the element;
+  // innerHTML only replaces child nodes, not the element itself.
 }
 
 function updateCountryProgress(code, owned) {
