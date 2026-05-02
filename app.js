@@ -80,8 +80,9 @@ function renderCountriesGrid(filter = currentRegionFilter) {
 
   list.forEach(country => {
     const owned = getCountryOwned(country.code);
-    const pct = Math.round((owned / STICKERS_PER_COUNTRY) * 100);
-    const complete = owned === STICKERS_PER_COUNTRY;
+    const total = getCountryTotal(country.code);
+    const pct = Math.round((owned / total) * 100);
+    const complete = owned === total;
 
     const card = document.createElement("div");
     card.className = `country-card${complete ? " complete" : ""}${country.host ? " host" : ""}`;
@@ -90,13 +91,13 @@ function renderCountriesGrid(filter = currentRegionFilter) {
 
     card.innerHTML = `
       <div class="card-flag">${country.flag}</div>
-      <div class="card-group-badge">Grupo ${country.group}</div>
+      <div class="card-group-badge">${country.group === 'Extra' || country.group === 'FWC' ? country.name : 'Grupo ' + country.group}</div>
       <div class="card-name">${country.name}</div>
       <div class="card-progress-wrap">
         <div class="card-progress-bar">
           <div class="card-progress-fill" style="width:${pct}%"></div>
         </div>
-        <span class="card-progress-text">${owned}/20</span>
+        <span class="card-progress-text">${owned}/${total}</span>
       </div>
       ${complete ? '<div class="card-badge">✔ COMPLETO</div>' : ""}
       ${country.host ? '<div class="card-host-badge">SEDE</div>' : ""}
@@ -114,7 +115,12 @@ function filterRegion(btn, group) {
 }
 
 function getCountryOwned(code) {
-  return Object.keys(collection).filter(k => k.startsWith(code + "-") && collection[k] !== null).length;
+  return Object.keys(collection).filter(k => k.startsWith(code + "-")).length;
+}
+
+function getCountryTotal(code) {
+  const country = COUNTRIES.find(c => c.code === code);
+  return country ? (country.count || STICKERS_PER_COUNTRY) : STICKERS_PER_COUNTRY;
 }
 
 // ── Country / Stickers Screen ─────────────────────────────
@@ -170,12 +176,12 @@ function renderStickersGrid(country) {
   const grid = document.getElementById("stickers-grid");
   grid.innerHTML = "";
 
-  // Remove old delegated listener by replacing the grid node clone
-  // (simpler: we re-use a single delegated approach via data attributes)
-
   let owned = 0;
+  const count = country.count || STICKERS_PER_COUNTRY;
+  const startAt = country.startZero ? 0 : 1;
+  const endAt = country.startZero ? (count - 1) : count;
 
-  for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+  for (let i = startAt; i <= endAt; i++) {
     const key = `${country.code}-${i}`;
     const state = collection[key] || "none"; // none | normal | repeated
     if (state !== "none") owned++;
@@ -297,15 +303,20 @@ function refreshStickerCell(key) {
 }
 
 function updateCountryProgress(code, owned) {
-  const pct = Math.round((owned / STICKERS_PER_COUNTRY) * 100);
-  document.getElementById("detail-count").textContent = `${owned}/20`;
+  const total = getCountryTotal(code);
+  const pct = Math.round((owned / total) * 100);
+  document.getElementById("detail-count").textContent = `${owned}/${total}`;
   document.getElementById("detail-progress").style.width = `${pct}%`;
   updateCollectionBadge();
 }
 
 function markAllCountry() {
   if (!currentCountry) return;
-  for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+  const count = currentCountry.count || STICKERS_PER_COUNTRY;
+  const startAt = currentCountry.startZero ? 0 : 1;
+  const endAt = currentCountry.startZero ? (count - 1) : count;
+
+  for (let i = startAt; i <= endAt; i++) {
     const key = `${currentCountry.code}-${i}`;
     if (!collection[key]) collection[key] = "normal";
   }
@@ -317,12 +328,17 @@ function markAllCountry() {
 function clearCountry() {
   if (!currentCountry) return;
   if (!confirm(`Limpar todas as figurinhas de ${currentCountry.name}?`)) return;
-  for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+  
+  const count = currentCountry.count || STICKERS_PER_COUNTRY;
+  const startAt = currentCountry.startZero ? 0 : 1;
+  const endAt = currentCountry.startZero ? (count - 1) : count;
+
+  for (let i = startAt; i <= endAt; i++) {
     delete collection[`${currentCountry.code}-${i}`];
   }
   saveCollection();
   renderStickersGrid(currentCountry);
-  showToast("País limpo");
+  showToast("Seção limpa");
 }
 
 // ── Collection Screen ─────────────────────────────────────
@@ -342,8 +358,11 @@ function renderCollection() {
 
   COUNTRIES.forEach(country => {
     const stickers = [];
+    const count = country.count || STICKERS_PER_COUNTRY;
+    const startAt = country.startZero ? 0 : 1;
+    const endAt = country.startZero ? (count - 1) : count;
 
-    for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+    for (let i = startAt; i <= endAt; i++) {
       const key = `${country.code}-${i}`;
       const state = collection[key] || "none";
 
@@ -389,7 +408,7 @@ function renderCollection() {
       <span class="coll-flag">${country.flag}</span>
       <span class="coll-country-name">${country.name}</span>
       <span class="coll-country-code">${country.code}</span>
-      <span class="coll-owned">${getCountryOwned(country.code)}/20</span>
+      <span class="coll-owned">${getCountryOwned(country.code)}/${getCountryTotal(country.code)}</span>
     `;
     header.onclick = () => openCountry(country);
 
@@ -432,12 +451,15 @@ function setCollFilter(btn, filter) {
 
 // ── Stats ─────────────────────────────────────────────────
 function updateStats() {
-  const total = Object.keys(collection).length;
-  const countries = new Set(Object.keys(collection).map(k => k.split("-")[0])).size;
-  const pct = Math.round((total / (COUNTRIES.length * STICKERS_PER_COUNTRY)) * 100);
+  const totalOwned = Object.keys(collection).length;
+  const countriesCount = new Set(Object.keys(collection).map(k => k.split("-")[0])).size;
+  
+  // Dynamic total stickers sum
+  const totalStickers = COUNTRIES.reduce((acc, c) => acc + (c.count || STICKERS_PER_COUNTRY), 0);
+  const pct = Math.round((totalOwned / totalStickers) * 100);
 
-  document.getElementById("stat-total").textContent = total;
-  document.getElementById("stat-countries").textContent = countries;
+  document.getElementById("stat-total").textContent = totalOwned;
+  document.getElementById("stat-countries").textContent = countriesCount;
   document.getElementById("stat-pct").textContent = pct + "%";
   updateCollectionBadge();
 }
