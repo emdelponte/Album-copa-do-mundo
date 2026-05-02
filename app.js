@@ -1,0 +1,442 @@
+// ============================================================
+// APP.JS — Copa do Mundo 2026 Virtual Sticker Album
+// ============================================================
+
+// State
+let collection = {}; // { "BRA-1": "normal" | "repeated", ... }
+let currentCountry = null;
+let currentScreen = "home";
+let currentRegionFilter = "all";
+let currentCollFilter = "all";
+let pressTimer = null;
+
+// ── Init ──────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  loadCollection();
+  renderCountriesGrid();
+  updateStats();
+
+  // Splash animation
+  setTimeout(() => {
+    document.getElementById("splash").classList.add("fade-out");
+    setTimeout(() => {
+      document.getElementById("splash").classList.add("hidden");
+      document.getElementById("app").classList.remove("hidden");
+      document.getElementById("app").classList.add("fade-in");
+    }, 600);
+  }, 2000);
+});
+
+// ── Persistence ───────────────────────────────────────────
+function saveCollection() {
+  localStorage.setItem("copa2026_collection", JSON.stringify(collection));
+  updateStats();
+}
+
+function loadCollection() {
+  const saved = localStorage.getItem("copa2026_collection");
+  if (saved) collection = JSON.parse(saved);
+}
+
+// ── Navigation ────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const screen = document.getElementById(id);
+  screen.classList.add("active");
+  screen.classList.add("screen-enter");
+  setTimeout(() => screen.classList.remove("screen-enter"), 400);
+  currentScreen = id.replace("screen-", "");
+
+  const backBtn = document.getElementById("btn-back");
+  if (currentScreen === "home") {
+    backBtn.classList.add("hidden");
+  } else {
+    backBtn.classList.remove("hidden");
+  }
+}
+
+function goBack() {
+  if (currentScreen === "country") {
+    showScreen("screen-home");
+    renderCountriesGrid(); // refresh progress
+  } else {
+    showScreen("screen-home");
+  }
+}
+
+function goHome() {
+  showScreen("screen-home");
+  renderCountriesGrid();
+  updateStats();
+}
+
+// ── Countries Grid ────────────────────────────────────────
+function renderCountriesGrid(filter = currentRegionFilter) {
+  const grid = document.getElementById("countries-grid");
+  grid.innerHTML = "";
+
+  const list = filter === "all" ? COUNTRIES : COUNTRIES.filter(c => c.region === filter);
+
+  list.forEach(country => {
+    const owned = getCountryOwned(country.code);
+    const pct = Math.round((owned / STICKERS_PER_COUNTRY) * 100);
+    const complete = owned === STICKERS_PER_COUNTRY;
+
+    const card = document.createElement("div");
+    card.className = `country-card${complete ? " complete" : ""}${country.host ? " host" : ""}`;
+    card.setAttribute("data-region", country.region);
+    card.onclick = () => openCountry(country);
+
+    card.innerHTML = `
+      <div class="card-flag">${country.flag}</div>
+      <div class="card-code">${country.code}</div>
+      <div class="card-name">${country.name}</div>
+      <div class="card-progress-wrap">
+        <div class="card-progress-bar">
+          <div class="card-progress-fill" style="width:${pct}%"></div>
+        </div>
+        <span class="card-progress-text">${owned}/20</span>
+      </div>
+      ${complete ? '<div class="card-badge">✔ COMPLETO</div>' : ""}
+      ${country.host ? '<div class="card-host-badge">SEDE</div>' : ""}
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+function filterRegion(btn, region) {
+  document.querySelectorAll(".region-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  currentRegionFilter = region;
+  renderCountriesGrid(region);
+}
+
+function getCountryOwned(code) {
+  return Object.keys(collection).filter(k => k.startsWith(code + "-") && collection[k] !== null).length;
+}
+
+// ── Country / Stickers Screen ─────────────────────────────
+function openCountry(country) {
+  currentCountry = country;
+  document.getElementById("detail-flag").textContent = country.flag;
+  document.getElementById("detail-name").textContent = country.name;
+  document.getElementById("detail-region").textContent = getRegionLabel(country.region);
+  renderStickersGrid(country);
+  showScreen("screen-country");
+}
+
+function renderStickersGrid(country) {
+  const grid = document.getElementById("stickers-grid");
+  grid.innerHTML = "";
+
+  let owned = 0;
+
+  for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+    const key = `${country.code}-${i}`;
+    const state = collection[key] || "none"; // none | normal | repeated
+    if (state !== "none") owned++;
+
+    const cell = document.createElement("div");
+    cell.className = `sticker sticker-${state}`;
+    cell.id = `sticker-${key}`;
+    cell.innerHTML = `
+      <span class="sticker-num">${i}</span>
+      ${state === "repeated" ? '<span class="sticker-rep-badge">R</span>' : ""}
+      ${state === "normal" ? '<span class="sticker-check">✔</span>' : ""}
+    `;
+
+    // Click: toggle normal
+    cell.addEventListener("click", () => toggleSticker(key, cell));
+
+    // Long press: mark as repeated
+    cell.addEventListener("mousedown", () => startLongPress(key, cell));
+    cell.addEventListener("mouseup", cancelLongPress);
+    cell.addEventListener("mouseleave", cancelLongPress);
+    cell.addEventListener("touchstart", (e) => { e.preventDefault(); startLongPress(key, cell); }, { passive: false });
+    cell.addEventListener("touchend", cancelLongPress);
+
+    grid.appendChild(cell);
+  }
+
+  updateCountryProgress(country.code, owned);
+}
+
+function toggleSticker(key, cell) {
+  if (pressTimer) return; // was long press
+  const current = collection[key] || "none";
+
+  if (current === "none") {
+    collection[key] = "normal";
+    showToast(`Figurinha marcada! ✔`);
+  } else if (current === "normal") {
+    delete collection[key];
+    showToast(`Figurinha desmarcada`);
+  } else if (current === "repeated") {
+    collection[key] = "normal";
+    showToast(`Marcada como normal`);
+  }
+
+  saveCollection();
+  refreshStickerCell(key);
+  updateCountryProgress(currentCountry.code, getCountryOwned(currentCountry.code));
+}
+
+function startLongPress(key, cell) {
+  pressTimer = null;
+  pressTimer = setTimeout(() => {
+    pressTimer = "done";
+    const current = collection[key] || "none";
+    if (current !== "repeated") {
+      collection[key] = "repeated";
+      showToast(`Marcada como REPETIDA! 🔁`);
+    } else {
+      collection[key] = "normal";
+      showToast(`Repetida removida`);
+    }
+    saveCollection();
+    refreshStickerCell(key);
+    updateCountryProgress(currentCountry.code, getCountryOwned(currentCountry.code));
+    // Haptic if available
+    if (navigator.vibrate) navigator.vibrate(80);
+  }, 600);
+}
+
+function cancelLongPress() {
+  if (pressTimer && pressTimer !== "done") {
+    clearTimeout(pressTimer);
+  }
+  pressTimer = null;
+}
+
+function refreshStickerCell(key) {
+  const state = collection[key] || "none";
+  const cell = document.getElementById(`sticker-${key}`);
+  if (!cell) return;
+
+  cell.className = `sticker sticker-${state}`;
+  const num = key.split("-")[1];
+  cell.innerHTML = `
+    <span class="sticker-num">${num}</span>
+    ${state === "repeated" ? '<span class="sticker-rep-badge">R</span>' : ""}
+    ${state === "normal" ? '<span class="sticker-check">✔</span>' : ""}
+  `;
+
+  // Re-attach events after innerHTML replace
+  cell.addEventListener("click", () => toggleSticker(key, cell));
+  cell.addEventListener("mousedown", () => startLongPress(key, cell));
+  cell.addEventListener("mouseup", cancelLongPress);
+  cell.addEventListener("mouseleave", cancelLongPress);
+  cell.addEventListener("touchstart", (e) => { e.preventDefault(); startLongPress(key, cell); }, { passive: false });
+  cell.addEventListener("touchend", cancelLongPress);
+}
+
+function updateCountryProgress(code, owned) {
+  const pct = Math.round((owned / STICKERS_PER_COUNTRY) * 100);
+  document.getElementById("detail-count").textContent = `${owned}/20`;
+  document.getElementById("detail-progress").style.width = `${pct}%`;
+  updateCollectionBadge();
+}
+
+function markAllCountry() {
+  if (!currentCountry) return;
+  for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+    const key = `${currentCountry.code}-${i}`;
+    if (!collection[key]) collection[key] = "normal";
+  }
+  saveCollection();
+  renderStickersGrid(currentCountry);
+  showToast("Todas as figurinhas marcadas! 🎉");
+}
+
+function clearCountry() {
+  if (!currentCountry) return;
+  if (!confirm(`Limpar todas as figurinhas de ${currentCountry.name}?`)) return;
+  for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+    delete collection[`${currentCountry.code}-${i}`];
+  }
+  saveCollection();
+  renderStickersGrid(currentCountry);
+  showToast("País limpo");
+}
+
+// ── Collection Screen ─────────────────────────────────────
+function showCollection() {
+  renderCollection();
+  showScreen("screen-collection");
+}
+
+function renderCollection() {
+  const list = document.getElementById("collection-list");
+  const empty = document.getElementById("collection-empty");
+  const query = (document.getElementById("search-input")?.value || "").toLowerCase().trim();
+
+  list.innerHTML = "";
+
+  let groups = [];
+
+  COUNTRIES.forEach(country => {
+    const stickers = [];
+
+    for (let i = 1; i <= STICKERS_PER_COUNTRY; i++) {
+      const key = `${country.code}-${i}`;
+      const state = collection[key] || "none";
+
+      let show = false;
+      if (currentCollFilter === "all") show = true;
+      else if (currentCollFilter === "normal") show = state === "normal";
+      else if (currentCollFilter === "repeated") show = state === "repeated";
+      else if (currentCollFilter === "missing") show = state === "none";
+
+      if (!show) return;
+
+      // Search filter
+      if (query) {
+        const matchCountry = country.name.toLowerCase().includes(query) || country.code.toLowerCase().includes(query);
+        const matchNum = String(i).includes(query);
+        if (!matchCountry && !matchNum) return;
+      }
+
+      stickers.push({ num: i, state, key });
+    }
+
+    if (stickers.length > 0) {
+      groups.push({ country, stickers });
+    }
+  });
+
+  if (groups.length === 0) {
+    empty.classList.remove("hidden");
+    list.classList.add("hidden");
+    return;
+  }
+
+  empty.classList.add("hidden");
+  list.classList.remove("hidden");
+
+  groups.forEach(({ country, stickers }) => {
+    const section = document.createElement("div");
+    section.className = "coll-section";
+
+    const header = document.createElement("div");
+    header.className = "coll-section-header";
+    header.innerHTML = `
+      <span class="coll-flag">${country.flag}</span>
+      <span class="coll-country-name">${country.name}</span>
+      <span class="coll-country-code">${country.code}</span>
+      <span class="coll-owned">${getCountryOwned(country.code)}/20</span>
+    `;
+    header.onclick = () => openCountry(country);
+
+    const chips = document.createElement("div");
+    chips.className = "coll-chips";
+
+    stickers.forEach(({ num, state, key }) => {
+      const chip = document.createElement("div");
+      chip.className = `coll-chip coll-chip-${state}`;
+      chip.textContent = `${country.code}-${num}`;
+      chip.title = state === "repeated" ? "Repetida" : state === "normal" ? "Tenho" : "Falta";
+      chip.onclick = () => {
+        currentCountry = country;
+        openCountry(country);
+      };
+      chips.appendChild(chip);
+    });
+
+    section.appendChild(header);
+    section.appendChild(chips);
+    list.appendChild(section);
+  });
+}
+
+function filterCollection() {
+  renderCollection();
+}
+
+function clearSearch() {
+  document.getElementById("search-input").value = "";
+  renderCollection();
+}
+
+function setCollFilter(btn, filter) {
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  currentCollFilter = filter;
+  renderCollection();
+}
+
+// ── Stats ─────────────────────────────────────────────────
+function updateStats() {
+  const total = Object.keys(collection).length;
+  const countries = new Set(Object.keys(collection).map(k => k.split("-")[0])).size;
+  const pct = Math.round((total / (COUNTRIES.length * STICKERS_PER_COUNTRY)) * 100);
+
+  document.getElementById("stat-total").textContent = total;
+  document.getElementById("stat-countries").textContent = countries;
+  document.getElementById("stat-pct").textContent = pct + "%";
+  updateCollectionBadge();
+}
+
+function updateCollectionBadge() {
+  const total = Object.keys(collection).length;
+  document.getElementById("collection-badge").textContent = total;
+}
+
+// ── Export / Import ───────────────────────────────────────
+function exportData() {
+  const json = JSON.stringify(collection, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "copa2026_album.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Dados exportados! 📤");
+}
+
+function importDataClick() {
+  document.getElementById("import-file").click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      collection = data;
+      saveCollection();
+      renderCollection();
+      updateStats();
+      showToast("Dados importados com sucesso! 📥");
+    } catch {
+      showToast("Erro ao importar arquivo ❌");
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Toast ─────────────────────────────────────────────────
+let toastTimeout;
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function getRegionLabel(region) {
+  const labels = {
+    UEFA: "🇪🇺 UEFA — Europa",
+    CONMEBOL: "🌎 CONMEBOL — América do Sul",
+    CONCACAF: "🌍 CONCACAF — América do Norte / Central",
+    AFC: "🌏 AFC — Ásia",
+    CAF: "🌍 CAF — África",
+    OFC: "🌊 OFC — Oceania",
+  };
+  return labels[region] || region;
+}

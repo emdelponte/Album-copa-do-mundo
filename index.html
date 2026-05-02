@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Álbum Copa do Mundo 2026 🏆</title>
+  <meta name="description" content="Album virtual de figurinhas da Copa do Mundo de Futebol 2026. Controle suas figurinhas e repetidas facilmente." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash" class="splash">
+    <div class="splash-content">
+      <div class="splash-trophy">🏆</div>
+      <h1 class="splash-title">Copa do Mundo</h1>
+      <p class="splash-subtitle">2026 · USA · CANADA · MEXICO</p>
+      <p class="splash-tagline">Álbum Virtual de Figurinhas</p>
+      <div class="splash-loader">
+        <div class="loader-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP WRAPPER -->
+  <div id="app" class="app hidden">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-inner">
+        <button id="btn-back" class="btn-back hidden" onclick="goBack()">
+          <span>&#8592;</span>
+        </button>
+        <div class="header-brand" onclick="goHome()">
+          <span class="header-trophy">🏆</span>
+          <span class="header-title">Copa 2026</span>
+        </div>
+        <button class="btn-collection" onclick="showCollection()">
+          <span class="btn-collection-icon">⭐</span>
+          <span class="btn-collection-label">Minha Coleção</span>
+          <span id="collection-badge" class="collection-badge">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- SCREENS -->
+    <main class="main">
+
+      <!-- SCREEN: HOME (Countries) -->
+      <section id="screen-home" class="screen active">
+        <div class="screen-header">
+          <h2 class="screen-title">Selecione um País</h2>
+          <p class="screen-desc">48 seleções · 20 figurinhas por país · 960 figurinhas no total</p>
+          <div class="stats-bar">
+            <div class="stat-item">
+              <span class="stat-number" id="stat-total">0</span>
+              <span class="stat-label">Tenho</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number" id="stat-countries">0</span>
+              <span class="stat-label">Países</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number" id="stat-pct">0%</span>
+              <span class="stat-label">Completo</span>
+            </div>
+          </div>
+        </div>
+        <div class="region-filter">
+          <button class="region-btn active" data-region="all" onclick="filterRegion(this, 'all')">Todos</button>
+          <button class="region-btn" data-region="UEFA" onclick="filterRegion(this, 'UEFA')">🇪🇺 UEFA</button>
+          <button class="region-btn" data-region="CONMEBOL" onclick="filterRegion(this, 'CONMEBOL')">🌎 CONMEBOL</button>
+          <button class="region-btn" data-region="CONCACAF" onclick="filterRegion(this, 'CONCACAF')">🌍 CONCACAF</button>
+          <button class="region-btn" data-region="AFC" onclick="filterRegion(this, 'AFC')">🌏 AFC</button>
+          <button class="region-btn" data-region="CAF" onclick="filterRegion(this, 'CAF')">🌍 CAF</button>
+          <button class="region-btn" data-region="OFC" onclick="filterRegion(this, 'OFC')">🌊 OFC</button>
+        </div>
+        <div id="countries-grid" class="countries-grid"></div>
+      </section>
+
+      <!-- SCREEN: COUNTRY (Stickers) -->
+      <section id="screen-country" class="screen">
+        <div class="country-header">
+          <div class="country-flag-big" id="detail-flag"></div>
+          <div class="country-info">
+            <h2 id="detail-name" class="country-detail-name"></h2>
+            <p id="detail-region" class="country-detail-region"></p>
+            <div class="country-progress-wrap">
+              <div class="country-progress-bar">
+                <div id="detail-progress" class="country-progress-fill"></div>
+              </div>
+              <span id="detail-count" class="country-progress-count">0/20</span>
+            </div>
+          </div>
+        </div>
+        <div class="stickers-hint">
+          <span>🖱️ Clique para marcar/desmarcar · Clique longo para marcar como REPETIDA</span>
+        </div>
+        <div id="stickers-grid" class="stickers-grid"></div>
+        <div class="country-actions">
+          <button class="btn-action btn-all" onclick="markAllCountry()">✔ Marcar Todas</button>
+          <button class="btn-action btn-clear" onclick="clearCountry()">✖ Limpar País</button>
+        </div>
+      </section>
+
+      <!-- SCREEN: COLLECTION -->
+      <section id="screen-collection" class="screen">
+        <div class="screen-header">
+          <h2 class="screen-title">⭐ Minha Coleção</h2>
+          <p class="screen-desc">Todas as figurinhas que você tem</p>
+        </div>
+        <div class="collection-search">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input id="search-input" type="text" placeholder="Buscar por país ou número..." oninput="filterCollection()" />
+            <button class="search-clear" onclick="clearSearch()">✕</button>
+          </div>
+          <div class="collection-filters">
+            <button class="filter-btn active" data-filter="all" onclick="setCollFilter(this,'all')">Todas</button>
+            <button class="filter-btn" data-filter="normal" onclick="setCollFilter(this,'normal')">Tenho</button>
+            <button class="filter-btn" data-filter="repeated" onclick="setCollFilter(this,'repeated')">Repetidas</button>
+            <button class="filter-btn" data-filter="missing" onclick="setCollFilter(this,'missing')">Faltam</button>
+          </div>
+        </div>
+        <div id="collection-list" class="collection-list"></div>
+        <div id="collection-empty" class="collection-empty hidden">
+          <span class="empty-icon">📭</span>
+          <p>Nenhuma figurinha encontrada</p>
+          <p class="empty-sub">Comece selecionando as figurinhas que você tem!</p>
+        </div>
+        <div class="collection-export-wrap">
+          <button class="btn-export" onclick="exportData()">📤 Exportar dados</button>
+          <button class="btn-export btn-import" onclick="importDataClick()">📥 Importar dados</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)" />
+        </div>
+      </section>
+
+    </main>
+
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
