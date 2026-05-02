@@ -442,58 +442,54 @@ body {
 /* ── Country Navigation ── */
 .country-nav {
   max-width: 700px;
-  margin: 16px auto 0;
+  margin: 20px auto 0;
   padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 20px;
 }
 .country-nav-btn {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   color: var(--text);
-  border-radius: var(--radius-sm);
-  padding: 8px 14px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
   cursor: pointer;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   transition: var(--transition);
-  min-width: 100px;
+  font-size: 1.5rem; /* Seta bem maior */
+  box-shadow: var(--shadow);
 }
 .country-nav-btn:hover:not(:disabled) {
   background: var(--glass);
-  border-color: var(--gold-dark);
+  border-color: var(--gold);
   color: var(--gold);
+  transform: scale(1.1);
+}
+.country-nav-btn:active:not(:disabled) {
+  transform: scale(0.95);
 }
 .country-nav-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.15;
   cursor: not-allowed;
 }
-.country-nav-btn-right {
-  justify-content: flex-end;
-  text-align: right;
-}
 .country-nav-label {
-  font-size: 0.75rem;
-  color: var(--text2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 80px;
+  display: none; /* Removemos o texto para focar na seta grande */
 }
 .country-nav-index {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text3);
-  background: var(--bg3);
-  padding: 4px 12px;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--gold);
+  background: rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.1);
+  padding: 6px 18px;
   border-radius: 99px;
   white-space: nowrap;
+  letter-spacing: 1px;
 }
 
 /* ── Country Detail Header ── */
